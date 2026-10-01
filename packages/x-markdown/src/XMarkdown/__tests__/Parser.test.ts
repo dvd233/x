@@ -40,6 +40,18 @@ describe('Parser', () => {
       );
     });
 
+    it.each([
+      'https://example.com/路径（详情，更多）',
+      'https://example.com/路径（详情（第一，第二）；更多）',
+      'https://example.com/路径（详情',
+      'https://example.com/路径（详情（第一，第二）',
+    ])('should keep punctuation only within balanced CJK parentheses: %s', (url) => {
+      const parser = new Parser();
+      const result = parser.parse(`${url}，继续`);
+
+      expect(result).toBe(`<p><a href="${encodeURI(url)}">${url}</a>，继续</p>\n`);
+    });
+
     it('should not change explicit markdown links with CJK punctuation in the destination', () => {
       const parser = new Parser();
       const result = parser.parse('[示例](https://example.com/路径，详情)');

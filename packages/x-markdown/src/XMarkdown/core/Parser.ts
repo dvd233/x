@@ -107,19 +107,28 @@ class Parser {
             return false;
           }
 
-          let boundaryIndex = -1;
-          let openParens = 0;
-          let characterIndex = 0;
-          for (const character of token.raw) {
+          // Only matched ranges can contain punctuation; an unmatched opening
+          // parenthesis must not protect the following prose from truncation.
+          const matchedParens = new Map<number, number>();
+          const openParens: number[] = [];
+          for (let index = 0; index < token.raw.length; index += 1) {
+            const character = token.raw[index];
             if (character === CJK_PAREN_OPEN) {
-              openParens += 1;
-            } else if (character === CJK_PAREN_CLOSE && openParens > 0) {
-              openParens -= 1;
-            } else if (CJK_AUTOLINK_BOUNDARY.test(character)) {
-              boundaryIndex = characterIndex;
+              openParens.push(index);
+            } else if (character === CJK_PAREN_CLOSE && openParens.length > 0) {
+              matchedParens.set(openParens.pop()!, index);
+            }
+          }
+
+          let boundaryIndex = -1;
+          for (let index = 0; index < token.raw.length; index += 1) {
+            const closeIndex = matchedParens.get(index);
+            if (closeIndex !== undefined) {
+              index = closeIndex;
+            } else if (CJK_AUTOLINK_BOUNDARY.test(token.raw[index])) {
+              boundaryIndex = index;
               break;
             }
-            characterIndex += character.length;
           }
 
           if (boundaryIndex < 0) {
